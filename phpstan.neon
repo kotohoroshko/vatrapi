@@ -1,0 +1,37 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+    paths:
+        - app
+        - config
+
+    level: 5
+
+    tmpDir: storage/framework/cache/phpstan
+
+    checkOctaneCompatibility: true
+
+    checkModelProperties: true
+
+    stubFiles:
+        - app/Module/SwissEphemeris/Infrastructure/stubs/swephp.stub
+
+    ignoreErrors:
+        # The SwissEphemeris module keeps its config inside the module (per the
+        # modular architecture), so Larastan does not recognise it as a config
+        # directory. env() here is a legitimate Laravel config default.
+        -
+            identifier: larastan.noEnvCallsOutsideOfConfig
+            path: app/Module/SwissEphemeris/config/swiss-ephemeris.php
+        -
+            identifier: larastan.noEnvCallsOutsideOfConfig
+            path: app/Module/Landing/config/landing.php
+        # The swephp extension types its float params with the pseudo-type
+        # "double", which reflection reports literally as "double" when the
+        # extension is loaded (native reflection overrides the bundled stub).
+        # PHP coerces floats at runtime (tests pass); suppress at the single
+        # extension boundary.
+        -
+            message: '#expects double, float given\.#'
+            path: app/Module/SwissEphemeris/Infrastructure/Service/SwissEphemeris/SwephEphemerisService.php

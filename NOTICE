@@ -1,0 +1,39 @@
+vatrapi
+Copyright (C) 2026 the authors of vatrapi
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as published
+by the Free Software Foundation, version 3 of the License.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero
+General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program (the file LICENSE). If not, see
+<https://www.gnu.org/licenses/>.
+
+Network use (AGPL §13)
+----------------------
+Anyone who interacts with this program over a network may obtain the
+Corresponding Source at no charge from GET /source on the same origin
+(a download of this running tree), and from the public repository at
+https://github.com/kotohoroshko/vatrapi (also linked on /source via
+APP_SOURCE_URL).
+
+Third-party: Swiss Ephemeris
+----------------------------
+This combined work includes Swiss Ephemeris (copyright Astrodienst AG)
+and the php-sweph PHP extension, vendored at Docker/sweph/. Swiss
+Ephemeris is dual-licensed GNU AGPL-3.0 or Swiss Ephemeris Professional.
+This project uses AGPL-3.0 for the whole combined work.
+
+Preserve these files on all copies:
+  Docker/sweph/NOTICE.md
+  Docker/sweph/sweph/src/LICENSE
+  Docker/sweph/sweph/src/agpl-3.0.txt
+
+The names of the Swiss Ephemeris authors and of Astrodienst must not be
+used to promote software that uses Swiss Ephemeris except as required
+in that copyright notice.

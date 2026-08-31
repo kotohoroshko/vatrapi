@@ -1,0 +1,55 @@
+<?php
+
+/**
+ * PHPStan stub for the swephp extension.
+ *
+ * The extension declares its float parameters with the pseudo-type `double`,
+ * which PHP reflection reports literally as "double" and PHPStan then treats as
+ * an unknown type — producing false "expects double, float given" errors.
+ * These stubs redeclare the functions this module uses with accurate `float`
+ * types so static analysis reflects real (runtime-coerced) behaviour.
+ */
+
+/**
+ * @return array<int|string, float|int|string>
+ */
+function swe_calc_ut(float $tjd_ut, int $ipl, int $iflag): array {}
+
+/**
+ * @return array<int|string, float|int|string>
+ */
+function swe_fixstar_ut(string $star, float $tjd_ut, int $iflag): array {}
+
+function swe_get_planet_name(int $ipl): string {}
+
+function swe_julday(int $year, int $month, int $day, float $hour, ?int $gregflag = null): float {}
+
+/**
+ * @return array<string, float|int>
+ */
+function swe_revjul(float $jd, ?int $gregflag = null): array {}
+
+/**
+ * @return array<string, array<int, float>|int>
+ */
+function swe_houses(float $tjd_ut, float $geolat, float $geolon, string $hsys): array {}
+
+function swe_set_sid_mode(int $sid_mode, float $t0, float $ayan_t0): void {}
+
+function swe_get_ayanamsa_ut(float $tjd_ut): float {}
+
+/**
+ * @return array<string, array<int, float>|int|string>
+ */
+function swe_sol_eclipse_when_glob(float $tjd_start, int $iflag, int $ifltype, int $backw): array {}
+
+/**
+ * @return array<string, array<int, float>|int|string>
+ */
+function swe_lun_eclipse_when(float $tjd_ut, int $iflag, int $ifltype, int $backw): array {}
+
+function swe_set_ephe_path(?string $path = null): void {}
+
+function swe_sidtime(float $tjd_ut): float {}
+
+function swe_version(): string {}
