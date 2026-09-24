@@ -34,9 +34,9 @@ class LandingPageTest extends TestCase
         $response->assertOk();
         $response->assertSee('vatrapi', false);
         $response->assertSee('wordmark-fire', false);
-        $response->assertSee('The sky, computed.', false);
-        $response->assertSee('Ask the sky', false);
-        $response->assertSee('Read the API', false);
+        $response->assertSee('Swiss Ephemeris as a JSON&nbsp;API', false);
+        $response->assertSee('Open playground', false);
+        $response->assertSee('API reference', false);
         $response->assertSee('data-theme="night"', false);
         $response->assertDontSee('Natal chart instrument', false);
         $response->assertDontSee('hero-wheel', false);
