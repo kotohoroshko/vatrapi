@@ -6,6 +6,7 @@ namespace App\Providers\Modules;
 
 use App\Landing\Contracts\CorrespondingSourceArchive;
 use App\Landing\Domain\Playground\EndpointCatalog;
+use App\Landing\Infrastructure\Http\InternalApiClient;
 use App\Landing\Infrastructure\Service\CorrespondingSourceArchiver;
 use App\Landing\Infrastructure\Service\LegalDocumentReader;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -24,6 +25,7 @@ final class LandingServiceProvider extends ServiceProvider
 
         $this->app->singleton(EndpointCatalog::class);
         $this->app->singleton(LegalDocumentReader::class);
+        $this->app->singleton(InternalApiClient::class);
         $this->app->singleton(CorrespondingSourceArchive::class, CorrespondingSourceArchiver::class);
     }
 
@@ -33,6 +35,21 @@ final class LandingServiceProvider extends ServiceProvider
 
         RateLimiter::for('source-archive', function (Request $request) {
             return Limit::perMinute(6)->by($request->ip() ?? 'unknown');
+        });
+
+        RateLimiter::for('playground', function (Request $request) {
+            $perMinute = config('landing.playground.per_minute');
+
+            if ($perMinute === null || $perMinute === '') {
+                return Limit::none();
+            }
+
+            return Limit::perMinute((int) $perMinute)
+                ->by($request->ip() ?? 'unknown')
+                ->response(fn (Request $request, array $headers) => response()->json([
+                    'ok' => false,
+                    'error' => 'Playground limit reached. Call the API directly for more.',
+                ], 429, $headers));
         });
 
         Route::middleware('web')

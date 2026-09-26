@@ -15,4 +15,23 @@ return [
     |
     */
     'source_repository_url' => env('APP_SOURCE_URL') ?: null,
+
+    /*
+    |--------------------------------------------------------------------------
+    | Playground
+    |--------------------------------------------------------------------------
+    |
+    | The playground posts to /playground/{endpoint}; the server forwards the
+    | call to the JSON API with this key, so the key never reaches the browser.
+    | Register the same secret in API_KEYS on a "service" plan. Without a key
+    | the playground is subject to anonymous API limits.
+    |
+    | per_minute throttles the playground route itself per IP, so it cannot be
+    | used as an unlimited proxy. Empty disables it.
+    |
+    */
+    'playground' => [
+        'api_key' => env('PLAYGROUND_API_KEY') ?: null,
+        'per_minute' => env('PLAYGROUND_PER_MINUTE', 30),
+    ],
 ];
