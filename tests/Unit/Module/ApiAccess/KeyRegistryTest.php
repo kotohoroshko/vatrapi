@@ -16,7 +16,10 @@ class KeyRegistryTest extends TestCase
     {
         return new KeyRegistry(new Repository(['api-access' => [
             'header' => 'X-API-Key',
-            'plans' => ['basic' => ['per_minute' => 60, 'per_month' => 1000]],
+            'plans' => [
+                'basic' => ['per_minute' => 60, 'per_month' => 1000],
+                'pro' => ['per_minute' => 600, 'per_month' => 10000],
+            ],
             'anonymous' => $anonymous,
             'keys' => $keys,
         ]]));
@@ -34,6 +37,14 @@ class KeyRegistryTest extends TestCase
         $this->assertSame(60, $key->plan->perMinute);
         $this->assertSame(1000, $key->plan->perMonth);
         $this->assertNull($registry->find('0123456789abcdeX'));
+    }
+
+    public function test_a_name_may_hold_several_secrets_for_rotation(): void
+    {
+        $registry = $this->registry('acme:basic:old-secret-0123456789,acme:basic:new-secret-0123456789');
+
+        $this->assertSame('acme', $registry->find('old-secret-0123456789')?->name);
+        $this->assertSame('acme', $registry->find('new-secret-0123456789')?->name);
     }
 
     public function test_secret_may_contain_colons(): void
@@ -58,7 +69,9 @@ class KeyRegistryTest extends TestCase
             'missing parts' => ['acme:0123456789abcdef'],
             'unknown plan' => ['acme:gold:0123456789abcdef'],
             'short secret' => ['acme:basic:short'],
-            'duplicate name' => ['acme:basic:0123456789abcdef,acme:basic:fedcba9876543210'],
+            'name listed with two plans' => ['acme:basic:0123456789abcdef,acme:pro:fedcba9876543210'],
+            'name with unsafe characters' => ['zürich:basic:0123456789abcdef'],
+            'name with ampersand' => ['a&b:basic:0123456789abcdef'],
             'duplicate secret' => ['a:basic:0123456789abcdef,b:basic:0123456789abcdef'],
         ];
     }

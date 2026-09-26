@@ -7,8 +7,9 @@ namespace App\Landing\Infrastructure\Http;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Routing\Route;
 use Illuminate\Support\Facades\Facade;
-use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Dispatches a JSON POST through the HTTP kernel in-process, so the landing
@@ -16,6 +17,16 @@ use Symfony\Component\HttpFoundation\Response;
  */
 final class InternalApiClient
 {
+    /** Response headers worth passing back from the API to the browser. */
+    private const FORWARDED_HEADERS = [
+        'Content-Type',
+        'Retry-After',
+        'X-RateLimit-Limit',
+        'X-RateLimit-Remaining',
+        'X-RateLimit-Monthly-Limit',
+        'X-RateLimit-Monthly-Remaining',
+    ];
+
     public function __construct(private readonly Application $app) {}
 
     /**
@@ -34,14 +45,30 @@ final class InternalApiClient
             $server['HTTP_'.strtoupper(str_replace('-', '_', $name))] = $value;
         }
 
-        $request = Request::create($path, 'POST', server: $server, content: $body);
+        // Same scheme and host as the outer request, so URLs built inside match.
+        $request = Request::create($origin->getSchemeAndHttpHost().$path, 'POST', server: $server, content: $body);
+        $route = $origin->route();
 
         try {
-            return $this->app->make(Kernel::class)->handle($request);
+            $inner = $this->app->make(Kernel::class)->handle($request);
         } finally {
-            // The kernel rebinds the container request; restore the outer one.
+            // The kernel rebinds the request and current route; restore the outer ones.
             $this->app->instance('request', $origin);
+            if ($route instanceof Route) {
+                $this->app->instance(Route::class, $route);
+            }
             Facade::clearResolvedInstance('request');
         }
+
+        // Only the API's own payload and quota headers; global middleware
+        // headers (Link, CORS, …) are added once by the outer request.
+        $response = new Response((string) $inner->getContent(), $inner->getStatusCode());
+        foreach (self::FORWARDED_HEADERS as $name) {
+            if ($inner->headers->has($name)) {
+                $response->headers->set($name, (string) $inner->headers->get($name));
+            }
+        }
+
+        return $response;
     }
 }

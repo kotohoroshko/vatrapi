@@ -105,6 +105,33 @@ class ApiAccessTest extends TestCase
         $this->request(['X-API-Key' => self::SECRET])->assertUnprocessable();
     }
 
+    public function test_unknown_key_gets_401_even_when_anonymous_access_is_blocked(): void
+    {
+        config()->set('api-access.anonymous', ['per_minute' => 0, 'per_month' => null]);
+
+        $this->request(['X-API-Key' => 'typo-typo-typo-typo-typo'])
+            ->assertUnauthorized()
+            ->assertJson(['error' => 'Invalid API key.']);
+    }
+
+    public function test_rotated_secrets_share_one_quota(): void
+    {
+        config()->set('api-access.keys', 'acme:tiny:'.self::SECRET.',acme:tiny:rotated-secret-0123456789');
+
+        $this->request(['X-API-Key' => self::SECRET])->assertUnprocessable();
+        $this->request(['X-API-Key' => 'rotated-secret-0123456789'])->assertHeader('X-RateLimit-Remaining', '0');
+        $this->request(['X-API-Key' => self::SECRET])->assertTooManyRequests();
+    }
+
+    public function test_ipv6_clients_are_counted_per_64(): void
+    {
+        config()->set('api-access.anonymous', ['per_minute' => 1, 'per_month' => null]);
+
+        $this->withServerVariables(['REMOTE_ADDR' => '2001:db8:1:2::1'])->request()->assertUnprocessable();
+        $this->withServerVariables(['REMOTE_ADDR' => '2001:db8:1:2::ffff'])->request()->assertTooManyRequests();
+        $this->withServerVariables(['REMOTE_ADDR' => '2001:db8:1:3::1'])->request()->assertUnprocessable();
+    }
+
     public function test_anonymous_access_can_be_blocked(): void
     {
         config()->set('api-access.anonymous', ['per_minute' => '0', 'per_month' => null]);
@@ -122,7 +149,10 @@ class ApiAccessTest extends TestCase
 
         $this->request(['X-API-Key' => 'guess-0000000000000001'])->assertUnauthorized();
         $this->request(['X-API-Key' => 'guess-0000000000000002'])->assertUnauthorized();
-        $this->request(['X-API-Key' => 'guess-0000000000000003'])->assertTooManyRequests();
+        $this->request(['X-API-Key' => 'guess-0000000000000003'])
+            ->assertTooManyRequests()
+            ->assertJson(['error' => 'Too many requests with an invalid API key.'])
+            ->assertHeader('Retry-After');
         $this->request()->assertTooManyRequests();
     }
 

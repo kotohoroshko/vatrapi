@@ -7,9 +7,9 @@ namespace App\ApiAccess\Application\Middleware;
 use App\ApiAccess\Domain\Plan;
 use App\ApiAccess\Infrastructure\KeyRegistry;
 use Closure;
+use Illuminate\Cache\FileStore;
 use Illuminate\Cache\RateLimiter;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
-use Illuminate\Contracts\Cache\LockProvider;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Contracts\Config\Repository as Config;
 use Illuminate\Http\JsonResponse;
@@ -20,11 +20,13 @@ use Symfony\Component\HttpFoundation\Response;
 /**
  * Authenticates the optional API key header and enforces the per-minute and
  * per-calendar-month (UTC) limits of the resolved plan. Anonymous requests,
- * and requests with an unknown key, are counted per client IP.
+ * and requests with an unknown key, are counted per client IP (IPv6 per /64).
  */
 final class EnforceApiAccess
 {
     private const LOCK_WAIT_SECONDS = 5;
+
+    private const LOCK_RETRY_MS = 10;
 
     public function __construct(
         private readonly KeyRegistry $registry,
@@ -36,16 +38,13 @@ final class EnforceApiAccess
     public function handle(Request $request, Closure $next): Response
     {
         $secret = $request->header($this->registry->header());
-        $anonymousBucket = 'ip:'.($request->ip() ?? 'unknown');
+        $anonymousBucket = 'ip:'.self::clientNetwork($request->ip());
 
         if (is_string($secret) && $secret !== '') {
             $key = $this->registry->find($secret);
 
             if ($key === null) {
-                // Unknown keys spend the caller's anonymous quota, so guessing is throttled with it.
-                $quota = $this->consume($this->registry->anonymous(), $anonymousBucket, true);
-
-                return $quota instanceof Response ? $quota : $this->error('Invalid API key.', 401);
+                return $this->rejectUnknownKey($anonymousBucket);
             }
 
             $quota = $this->consume($key->plan, 'key:'.$key->name, false);
@@ -61,6 +60,47 @@ final class EnforceApiAccess
         $response->headers->add($quota);
 
         return $response;
+    }
+
+    /**
+     * Unknown keys always get 401, but they spend the caller's anonymous
+     * quota first, so flooding with made-up keys is throttled like anonymous
+     * traffic. A blocked anonymous plan (limit 0) counts nothing.
+     */
+    private function rejectUnknownKey(string $anonymousBucket): JsonResponse
+    {
+        $plan = $this->registry->anonymous();
+
+        if ($plan->perMinute !== 0 && $plan->perMonth !== 0) {
+            $quota = $this->consume($plan, $anonymousBucket, true);
+
+            if ($quota instanceof JsonResponse) {
+                $retryAfter = $quota->headers->get('Retry-After');
+
+                return $this->error(
+                    'Too many requests with an invalid API key.',
+                    429,
+                    $retryAfter === null ? [] : ['Retry-After' => $retryAfter],
+                );
+            }
+        }
+
+        return $this->error('Invalid API key.', 401);
+    }
+
+    /**
+     * IPv4 addresses as-is; IPv6 by /64, the smallest block a client usually
+     * controls, so rotating addresses inside it does not reset the quota.
+     */
+    public static function clientNetwork(?string $ip): string
+    {
+        $packed = $ip === null ? false : @inet_pton($ip);
+
+        if ($packed === false) {
+            return $ip ?? 'unknown';
+        }
+
+        return strlen($packed) === 16 ? bin2hex(substr($packed, 0, 8)).'::/64' : $ip;
     }
 
     /**
@@ -124,8 +164,9 @@ final class EnforceApiAccess
     }
 
     /**
-     * Serialises counting per bucket: cache increments are read-modify-write
-     * on some stores (file), so parallel requests could otherwise lose hits.
+     * Serialises counting per bucket on the file store, whose increment is a
+     * read-modify-write; parallel requests could otherwise lose hits. Other
+     * stores (redis, memcached, database, array) increment atomically.
      *
      * @template T
      *
@@ -136,11 +177,12 @@ final class EnforceApiAccess
     {
         $store = $this->cache->store($this->config->get('cache.limiter'))->getStore();
 
-        if (! $store instanceof LockProvider) {
+        if (! $store instanceof FileStore) {
             return $callback();
         }
 
-        return $store->lock('api-access:lock:'.$bucket, self::LOCK_WAIT_SECONDS)
+        return $store->lock('api-access:lock:'.sha1($bucket), self::LOCK_WAIT_SECONDS)
+            ->betweenBlockedAttemptsSleepFor(self::LOCK_RETRY_MS)
             ->block(self::LOCK_WAIT_SECONDS, $callback);
     }
 

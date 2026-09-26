@@ -204,6 +204,11 @@
                 },
                 body: JSON.stringify(body),
             });
+            if (response.status === 419) {
+                showOutput({ ok: false, error: 'Your session expired. Reload the page and run the request again.' });
+                setStatus('419 · reload page', 'error');
+                return;
+            }
             const payload = await response.json();
             const ms = Math.round(performance.now() - started);
             showOutput(payload);

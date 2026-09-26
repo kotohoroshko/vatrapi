@@ -51,8 +51,10 @@ return [
     |
     | Comma-separated "name:plan:secret" entries, e.g.
     | API_KEYS="acme:basic:9f2c…,internal:pro:41ab…"
-    | The name identifies the key in counters; the secret goes in the header.
-    | Secrets need 16+ characters and no commas (e.g. openssl rand -hex 24).
+    | The name identifies the key in counters ([A-Za-z0-9_-]); the secret goes
+    | in the header. Secrets need 16+ characters and no commas (e.g. openssl
+    | rand -hex 24). To rotate, list the name twice with the same plan and
+    | both secrets; they share one quota until the old one is removed.
     |
     */
     'keys' => env('API_KEYS', ''),
