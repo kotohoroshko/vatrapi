@@ -32,6 +32,18 @@ return [
     |
     */
 
+    /*
+    |--------------------------------------------------------------------------
+    | Rate Limiter Store
+    |--------------------------------------------------------------------------
+    |
+    | Store used by RateLimiter (API quotas, throttles). Use a shared store
+    | such as redis when running more than one app server.
+    |
+    */
+
+    'limiter' => env('CACHE_LIMITER_STORE', 'rate-limits'),
+
     'stores' => [
 
         'array' => [
@@ -51,6 +63,14 @@ return [
             'driver' => 'file',
             'path' => storage_path('framework/cache/data'),
             'lock_path' => storage_path('framework/cache/data'),
+        ],
+
+        // API quotas (app/Module/ApiAccess). Kept apart from the default store
+        // so `php artisan cache:clear` does not reset monthly counters.
+        'rate-limits' => [
+            'driver' => 'file',
+            'path' => storage_path('framework/rate-limits'),
+            'lock_path' => storage_path('framework/rate-limits'),
         ],
 
         'storage' => [

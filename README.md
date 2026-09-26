@@ -65,12 +65,27 @@ Builds vendored `Docker/sweph`, drops `storage/swephp/swephp.so`, and enables it
 app/Module/
 ├── SwissEphemeris/      Calculation engine
 ├── SwissEphemerisAPI/   HTTP JSON API
+├── ApiAccess/           API keys + rate limits
 └── Landing/             Public site + playground
 ```
 
 No root `routes/`, `resources/`, or `database/`. Module providers live in `app/Providers/Modules/`.
 
 Agent conventions: [AGENTS.md](./AGENTS.md), [MODULAR_ARCHITECTURE_AI_GUIDELINE.md](./MODULAR_ARCHITECTURE_AI_GUIDELINE.md).
+
+## API keys and limits
+
+The JSON API is public. An `X-API-Key` header switches a request to that key's plan; an unknown key gets `401`. No database — keys come from `.env`, plans from `app/Module/ApiAccess/config/api-access.php`:
+
+```dotenv
+API_KEYS="acme:basic:<secret>,internal:pro:<secret>"   # name:plan:secret, secret ≥ 16 chars
+API_ANONYMOUS_PER_MINUTE=                            # empty = unlimited, 0 = blocked
+API_ANONYMOUS_PER_MONTH=
+```
+
+Each plan has a per-minute and a per-calendar-month (UTC) limit. Keyed requests are counted per key, anonymous ones per IP (IPv6 per /64), in the `rate-limits` file store, which `php artisan cache:clear` leaves alone. Use a shared store such as Redis (`CACHE_LIMITER_STORE`) when running more than one app server. To rotate a key, list its name twice with the old and new secret; both share one quota. Responses carry `X-RateLimit-Limit`/`-Remaining` and `X-RateLimit-Monthly-Limit`/`-Remaining`; over the limit you get `429` with `Retry-After` and `{ "ok": false, "error": … }`. Generate a secret with `openssl rand -hex 24`.
+
+The landing playground calls `POST /playground/{endpoint}`, which forwards to the API in-process with `PLAYGROUND_API_KEY` added server-side — the key never reaches the browser. Put the same secret in `API_KEYS` on the unlimited `service` plan (`playground:service:<secret>`). The playground route only proxies catalog endpoints and is throttled per IP (`PLAYGROUND_PER_MINUTE`, default 30; `PLAYGROUND_PER_DAY`, default 500). Its CSRF check stops other websites, not scripts, so these limits are what keep it from being an open proxy.
 
 ## License
 

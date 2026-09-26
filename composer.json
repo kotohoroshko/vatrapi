@@ -30,7 +30,8 @@
             "App\\": "app/",
             "App\\SwissEphemeris\\": "app/Module/SwissEphemeris",
             "App\\SwissEphemerisAPI\\": "app/Module/SwissEphemerisAPI",
-            "App\\Landing\\": "app/Module/Landing"
+            "App\\Landing\\": "app/Module/Landing",
+            "App\\ApiAccess\\": "app/Module/ApiAccess"
         }
     },
     "autoload-dev": {

@@ -47,6 +47,7 @@
     const copyEl = document.getElementById('copy-curl');
     const tabs = [...document.querySelectorAll('.play-tab')];
 
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
     const EMPTY_OUTPUT = 'Run the request to see the response.';
 
     let activeId = natalDefault.id;
@@ -193,14 +194,21 @@
         const started = performance.now();
 
         try {
-            const response = await fetch(`${data.apiBase}${endpoint.path}`, {
+            // Runs through the landing proxy, which adds the playground's service key server-side.
+            const response = await fetch(`${data.playgroundBase}/${endpoint.id}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     Accept: 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
                 },
                 body: JSON.stringify(body),
             });
+            if (response.status === 419) {
+                showOutput({ ok: false, error: 'Your session expired. Reload the page and run the request again.' });
+                setStatus('419 · reload page', 'error');
+                return;
+            }
             const payload = await response.json();
             const ms = Math.round(performance.now() - started);
             showOutput(payload);

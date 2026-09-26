@@ -8,6 +8,17 @@ final class EndpointCatalog
 {
     public const API_PREFIX = '/api/swiss-ephemeris';
 
+    public function find(string $id): ?PlaygroundEndpoint
+    {
+        foreach ($this->all() as $endpoint) {
+            if ($endpoint->id === $id) {
+                return $endpoint;
+            }
+        }
+
+        return null;
+    }
+
     /**
      * @return list<PlaygroundEndpoint>
      */
