@@ -23,8 +23,8 @@ return [
     |
     */
     'plans' => [
-        'basic' => ['per_minute' => 60, 'per_month' => 10_000],
-        'pro' => ['per_minute' => 300, 'per_month' => 250_000],
+        'basic' => ['per_minute' => 60, 'per_month' => 10000],
+        'pro' => ['per_minute' => 300, 'per_month' => 250000],
         // Internal callers such as the landing playground; never hand out.
         'service' => ['per_minute' => null, 'per_month' => null],
     ],
