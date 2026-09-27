@@ -21,7 +21,7 @@ final class SwissEphemerisAPIServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        Route::middleware('api')
+        Route::middleware(['api', 'api-access'])
             ->prefix('api/swiss-ephemeris')
             ->name('swiss-ephemeris.')
             ->group(self::MODULE_PATH.'/routes.php');

@@ -37,6 +37,7 @@ final class LandingController
             'jsonLd' => $this->jsonLd($apiBase, $endpoints),
             'landingData' => [
                 'apiBase' => $apiBase,
+                'playgroundBase' => url('/playground'),
                 'endpoints' => array_map(
                     static fn (PlaygroundEndpoint $endpoint): array => $endpoint->toArray(),
                     $endpoints,

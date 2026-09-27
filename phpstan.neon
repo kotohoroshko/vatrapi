@@ -27,6 +27,9 @@ parameters:
         -
             identifier: larastan.noEnvCallsOutsideOfConfig
             path: app/Module/Landing/config/landing.php
+        -
+            identifier: larastan.noEnvCallsOutsideOfConfig
+            path: app/Module/ApiAccess/config/api-access.php
         # The swephp extension types its float params with the pseudo-type
         # "double", which reflection reports literally as "double" when the
         # extension is loaded (native reflection overrides the bundled stub).
